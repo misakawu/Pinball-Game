@@ -86,8 +86,9 @@ class Shields:
         
     def use(self,x):
         x.health+=self.point
-        print('使用道具：护盾药水，血量增加'+self.point)
+        print('使用道具：护盾药水，血量增加',self.point)
         items.pop(0)
+        
 #敌人类
 class Enemy:
     def __init__(self):
@@ -197,8 +198,12 @@ class Ball:
                #记分
                global score
                score+=1
-               t = threading.Thread(target=score_up, args=(score,brick.x,brick.y))
-               t.start()
+               sc=ScorePoint(brick.x,brick.y,score)
+               score_list.append(sc)
+               #多线程展示
+               #t = threading.Thread(target=score_up, args=(score,brick.x,brick.y))
+               #t.start()
+               score_show()
                bricks.remove(brick)
                return True
         return False
@@ -215,7 +220,13 @@ class Line:
     def draw(self,surface):
         pygame.draw.line(surface, self.color, self.start_pos, self.end_pos, self.width)
         
-
+#得分类
+class ScorePoint:
+    def __init__(self,x,y,point):
+        self.x=x
+        self.y=y
+        self.point=point
+        self.time=25
 
 ################################################
 # 初始化Pygame
@@ -240,10 +251,13 @@ bricks = []  # 砖块列表
 player = Player()
 #道具
 items =[]
+food=HPbottle(20)
+items.append(food)
 #敌人
 enemy = Enemy()
 #得分
 score = 0
+score_list = []
 
 ################################################################
 #障碍物生成函数
@@ -344,20 +358,27 @@ def random_state():
         horizon(3,35,10,600,1)
 ##########################################################
 #计分函数
-def score_up(score,x,y):
-    #显示分数
-    start_time = pygame.time.get_ticks()
-    showing_number = True
-    while showing_number:
-        current_time = pygame.time.get_ticks()
-        elapsed_time = current_time - start_time
-        if elapsed_time >= 500:
-            showing_number = False
-        text = font_s.render(str(score), True, 'white')
-        screen.blit(text, (x, y))
-        # 更新屏幕显示
-        pygame.display.flip()
-            
+def score_show():
+#显示分数
+#    start_time = pygame.time.get_ticks()
+#    showing_number = True
+#    text = font_s.render(str(score), True, 'white')
+#    while showing_number:
+#        current_time = pygame.time.get_ticks()
+#        elapsed_time = current_time - start_time
+#        if elapsed_time >= 500:
+#            showing_number = False
+#        screen.blit(text, (x, y))
+#        # 更新屏幕显示
+#        pygame.display.update()
+    for x,i in enumerate(score_list):
+        if i.time!=0:
+            i.time-=1
+            text = font_s.render(str(i.point), True, 'white')
+            screen.blit(text, (i.x, i.y))
+        else:
+            del score_list[x]
+    return
 #########################################################
 
 #开始循环
@@ -405,10 +426,10 @@ def start_cilcle():
                     enemy.draw(screen)
                     for i,item in enumerate(items):
                         item.draw(screen,20+i*40)
-                    pygame.display.flip()
+                    pygame.display.update()
                     
                     
-#游戏内循环
+#玩家循环
 def main_cilcle():
     main_game=True
     while main_game:
@@ -442,10 +463,11 @@ def main_cilcle():
                         item.use(enemy)
                     else:
                         item.use(player)
-        
+        #渲染分数
+        score_show()
         #刷新频率
-        pygame.display.flip()
-        time.sleep(1/50)
+        pygame.display.update()
+        time.sleep(1/60)
         
         
 #敌方行动回合
@@ -491,105 +513,104 @@ def enemy_acting():
                     item.use(player)
         
         #刷新频率
-        pygame.display.flip()
+        pygame.display.update()
         time.sleep(1/1000)
 
 #动画演示
 def acting(x,damage):
     #显示当前血量
     screen.blit(background, (0, 0))
-    pygame.display.flip()
     #角色显示
     screen.blit(x.image,(480,200))
     #生命值显示
     text = font.render("Health:"+str(x.health), True, 'red')
     screen.blit(text, (410, 300))
-    pygame.display.flip()
+    pygame.display.update()
     #显示受击血量
     text = font_s.render('-'+str(x.damage)+'*'+'('+str(score)+'/10)', True, 'red')
     screen.blit(text, (600, 300))
-    pygame.display.flip()
+    pygame.display.update()
     time.sleep(1)
     #显示受击后血量
     x.health-=damage
     screen.blit(background, (0, 0))
-    pygame.display.flip()
+    pygame.display.update()
     #角色显示
     screen.blit(x.image,(480,200))
     text = font.render("Health:"+str(x.health), True, 'red')
     screen.blit(text, (410, 300))
-    pygame.display.flip()
+    pygame.display.update()
     time.sleep(1)
 
 #回合结束奖励动画
 def reword():
-    x=random.randint(0,3)
-    selected=True
-    while selected:
-        if x==0:
-            new_food = HPbottle(20)
-            items.append(new_food)
-            screen.blit(background, (0, 0))
-            pygame.display.flip()
-            screen.blit(new_food.image,(480,200))
-            text = font.render("You deserve it", True, 'yellow')
-            screen.blit(text, (370, 300))
-            pygame.display.flip()
-            print('获得道具：回复药')
-            close=True
-            while close:
-                for event in pygame.event.get():
-                    if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:  
-                        return
-                time.sleep(0.5)
-        elif x==1:
-            new_weapon = Weapon(20)
-            items.append(new_weapon)
-            screen.blit(background, (0, 0))
-            pygame.display.flip()
-            screen.blit(new_weapon.image,(480,200))
-            text = font.render("You deserve it", True, 'yellow')
-            screen.blit(text, (370, 300))
-            pygame.display.flip()
-            print('获得道具：枪')
-            close=True
-            while close:
-                for event in pygame.event.get():
-                    if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:    
-                        return
-                time.sleep(0.5)
-        elif x==2:
-            new_bless = Bless(1)
-            items.append(new_bless)
-            screen.blit(background, (0, 0))
-            pygame.display.flip()
-            screen.blit(new_bless.image,(480,200))
-            text = font.render("You deserve it", True, 'yellow')
-            screen.blit(text, (370, 300))
-            pygame.display.flip()
-            print('获得道具：力量药水')
-            close=True
-            while close:
-                for event in pygame.event.get():
-                    if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:  
-                        return
-                time.sleep(0.5)
-        elif x==3:
-            new_Shields = Shields(1)
-            items.append(new_Shields)
-            screen.blit(background, (0, 0))
-            pygame.display.flip()
-            screen.blit(new_Shields.image,(470,200))
-            text = font.render("You deserve it", True, 'yellow')
-            screen.blit(text, (370, 300))
-            pygame.display.flip()
-            print('获得道具：护盾药水')
-            close=True
-            while close:
-                for event in pygame.event.get():
-                    if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:   
-                        return
-                time.sleep(0.5)
+    x=random.randint(0,39)
+    x=int(x/10)
+
+    if x==0:
+        new_food = HPbottle(20)
+        items.append(new_food)
+        screen.blit(background, (0, 0))
+        pygame.display.update()
+        screen.blit(new_food.image,(480,200))
+        text = font.render("You deserve it", True, 'yellow')
+        screen.blit(text, (370, 300))
+        pygame.display.update()
+        print('获得道具：回复药')
+        close=True
+        while close:
+            for event in pygame.event.get():
+                if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:  
+                    return
+            time.sleep(0.5)
+    elif x==1:
+        new_weapon = Weapon(20)
+        items.append(new_weapon)
+        screen.blit(background, (0, 0))
+        pygame.display.update()
+        screen.blit(new_weapon.image,(480,200))
+        text = font.render("You deserve it", True, 'yellow')
+        screen.blit(text, (370, 300))
+        pygame.display.update()
+        print('获得道具：枪')
+        close=True
+        while close:
+            for event in pygame.event.get():
+                if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:    
+                    return
+            time.sleep(0.5)
+    elif x==2:
+        new_bless = Bless(1)
+        items.append(new_bless)
+        screen.blit(background, (0, 0))
+        pygame.display.update()
+        screen.blit(new_bless.image,(480,200))
+        text = font.render("You deserve it", True, 'yellow')
+        screen.blit(text, (370, 300))
+        pygame.display.update()
+        print('获得道具：力量药水')
+        close=True
+        while close:
+            for event in pygame.event.get():
+                if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:  
+                    return
+            time.sleep(0.5)
+    elif x==3:
+        new_Shields = Shields(1)
+        items.append(new_Shields)
+        screen.blit(background, (0, 0))
+        pygame.display.update()
+        screen.blit(new_Shields.image,(470,200))
+        text = font.render("You deserve it", True, 'yellow')
+        screen.blit(text, (370, 300))
+        pygame.display.update()
+        print('获得道具：护盾药水')
+        close=True
+        while close:
+            for event in pygame.event.get():
+                if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:   
+                    return
+            time.sleep(0.5)
 
 #新关卡
 def new_game():
@@ -600,7 +621,7 @@ def new_game():
         text2=font_scB.render("A NEW GAEW", True, 'red')
         screen.blit(text, (100, 200))
         screen.blit(text2, (200, 300))
-        pygame.display.flip()
+        pygame.display.update()
         for event in pygame.event.get():
             if event.type==pygame.KEYDOWN or event.type==pygame.MOUSEBUTTONDOWN:  
                 player.health=100
@@ -618,8 +639,6 @@ def main():
         #渲染道具
         new_ball = Ball(screen_size,500,50)
         balls.append(new_ball)
-        food=HPbottle(20)
-        items.append(food)
         #生成砖块
         del bricks[:]
         random_state()
@@ -636,21 +655,21 @@ def main():
         enemy_acting()
         acting(player,int(enemy.damage*score/10))
         #游戏结束动画
-        if player.health<=0:
-            while True:
-                screen.blit(background, (0, 0))
-                text = font_scB.render("YOU DEAD", True, 'red')
-                screen.blit(text, (300, 300))
-                pygame.display.flip() 
-                time.sleep(1)
-                new_game()
-        else:
+        if enemy.health<=0:
             while True:
                 screen.blit(background, (0, 0))
                 text = font_sB.render("GOOD GAME", True, 'yellow')
                 screen.blit(text, (300, 300))
-                pygame.display.flip()
+                pygame.display.update()
                 time.sleep(1)
+        elif player.health<=0:
+            while True:
+                screen.blit(background, (0, 0))
+                text = font_scB.render("YOU DEAD", True, 'red')
+                screen.blit(text, (300, 300))
+                pygame.display.update() 
+                time.sleep(1)
+                new_game()
         reword()
     
 main()
